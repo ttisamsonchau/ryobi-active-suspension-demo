@@ -5,6 +5,15 @@
 #include <canbus_driver_twai.h>
 // #include <mcp2515.h>
 
+// Serial debug port baudrate
+#define debug_baud 921600
+
+// debug serial port
+void serial_init(){
+    Serial.begin(debug_baud);
+    //Serial.flush();
+}
+
 // ADC pin
 #define SW_1_ADC_PIN 34     // empty
 #define SW_2_ADC_PIN 35     // rotary resistor

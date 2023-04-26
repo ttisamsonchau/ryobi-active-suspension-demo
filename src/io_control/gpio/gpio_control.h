@@ -1,6 +1,10 @@
 #pragma once
 #include "share_param.h"
 
+// ADC value max min
+#define ADC_MIN_VALUE 0
+#define ADC_MAX_VALUE 4095
+
 // btn state
 static bool user_btn_press = false;
 static uint8_t user_btn_counter = 0;
@@ -10,10 +14,12 @@ static float y_axis_offset = 0.0;
 // slow speed gpio initalization
 void gpio_init()
 {
+    // pin config
     pinMode(SW_1_ADC_PIN, INPUT);
     pinMode(SW_2_ADC_PIN, INPUT);
     pinMode(SW_3_ADC_PIN, INPUT);
     pinMode(SW_4_ADC_PIN, INPUT);
+    pinMode(SW_5_PIN, INPUT);
 
     pinMode(CURRENT_ADC_PIN, INPUT);
     pinMode(VOLTAGE_ADC_PIN, INPUT);
@@ -29,7 +35,7 @@ void gpio_init()
     analogReadResolution(12);
     // analogSetPinAttenuation(SW_1_ADC_PIN, ADC_11db);
     analogSetPinAttenuation(SW_2_ADC_PIN, ADC_11db);
-        analogSetPinAttenuation(SW_3_ADC_PIN, ADC_11db);
+    analogSetPinAttenuation(SW_3_ADC_PIN, ADC_11db);
     analogSetPinAttenuation(SW_4_ADC_PIN, ADC_11db);
     analogSetPinAttenuation(CURRENT_ADC_PIN, ADC_11db);
     analogSetPinAttenuation(VOLTAGE_ADC_PIN, ADC_11db);
@@ -57,6 +63,7 @@ void user_btn_control()
         motor_FR.state = CALIBRATING;
         motor_RL.state = CALIBRATING;
         motor_RR.state = CALIBRATING;
+        imu.set_zero_flag = true;
         unlockVariable();
         user_btn_counter = 0;
     }
@@ -95,15 +102,20 @@ void user_btn_control()
 
 void gpio_update()
 {
-    // update volatage reading
-    user_btn_control();
-    x_axis_offset = (float)map(analogRead(SW_4_ADC_PIN), 0, 4095, -40, 40);
-    y_axis_offset = (float)map(analogRead(SW_3_ADC_PIN), 0, 4095, -40, 40);
     
+    user_btn_control();
+    // joystick control
+    // x_axis_offset = (float)map(analogRead(SW_4_ADC_PIN), ADC_MIN_VALUE, ADC_MAX_VALUE, -MOTOR_ADJ_RANGE, MOTOR_ADJ_RANGE);
+    // y_axis_offset = (float)map(analogRead(SW_3_ADC_PIN), ADC_MIN_VALUE, ADC_MAX_VALUE, -MOTOR_ADJ_RANGE, MOTOR_ADJ_RANGE);
+    // imu leveling
+    y_axis_offset = (float)map(imu.pitch, -15, 15, -MOTOR_ADJ_RANGE, MOTOR_ADJ_RANGE);
+    x_axis_offset = (float)map(imu.roll, -15, 15, -MOTOR_ADJ_RANGE, MOTOR_ADJ_RANGE);
     lockVariable();
+    // update volatage reading
     input_bus_voltage = (((float)analogReadMilliVolts(VOLTAGE_ADC_PIN)) / 1000 / 0.06976744186) - 0.5;
     if (input_bus_voltage < batt_low_voltage)
     {
+        //low bus voltage error
     }
 
     // update led state
@@ -127,9 +139,9 @@ void gpio_update()
     }
 
     // update suspension position setpoint
-    motor_FL.pos_setpt = (float)map(analogRead(SW_2_ADC_PIN), 0, 4095, 0, 90) * motor_FL.dir + x_axis_offset + y_axis_offset;
-    motor_FR.pos_setpt = (float)map(analogRead(SW_2_ADC_PIN), 0, 4095, 0, 90) * motor_FR.dir - x_axis_offset + y_axis_offset;
-    motor_RL.pos_setpt = (float)map(analogRead(SW_2_ADC_PIN), 0, 4095, 0, 90) * motor_RL.dir + x_axis_offset - y_axis_offset;
-    motor_RR.pos_setpt = (float)map(analogRead(SW_2_ADC_PIN), 0, 4095, 0, 90) * motor_RR.dir - x_axis_offset - y_axis_offset;
+    motor_FL.pos_setpt = (float)map(analogRead(SW_2_ADC_PIN), ADC_MIN_VALUE, ADC_MAX_VALUE, 0, 90) * motor_FL.dir + x_axis_offset + y_axis_offset;
+    motor_FR.pos_setpt = (float)map(analogRead(SW_2_ADC_PIN), ADC_MIN_VALUE, ADC_MAX_VALUE, 0, 90) * motor_FR.dir - x_axis_offset + y_axis_offset;
+    motor_RL.pos_setpt = (float)map(analogRead(SW_2_ADC_PIN), ADC_MIN_VALUE, ADC_MAX_VALUE, 0, 90) * motor_RL.dir + x_axis_offset - y_axis_offset;
+    motor_RR.pos_setpt = (float)map(analogRead(SW_2_ADC_PIN), ADC_MIN_VALUE, ADC_MAX_VALUE, 0, 90) * motor_RR.dir - x_axis_offset - y_axis_offset;
     unlockVariable();
 }

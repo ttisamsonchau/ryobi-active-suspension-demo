@@ -5,6 +5,11 @@
 // imu object init
 CJY901 JY901;
 
+// zero point offset of the pitch & roll angle
+float pitch_zero_offset = 0.0;
+float roll_zero_offset = 0.0;
+float yaw_zero_offset = 0.0;
+
 // imu device init
 void imu_init()
 {
@@ -12,9 +17,26 @@ void imu_init()
     vTaskDelay(pdMS_TO_TICKS(1000)); // init time of the JY901/ JY601 required at least 80ms
 }
 
+// imu set current position as zero
+void imu_set_zero(){
+    JY901.GetAngle();
+    pitch_zero_offset = ((float)JY901.stcAngle.Angle[0] / 32768 * 180);
+    roll_zero_offset = ((float)JY901.stcAngle.Angle[1] / 32768 * 180);
+    yaw_zero_offset = ((float)JY901.stcAngle.Angle[2] / 32768 * 180);
+}
+
 // imu update parameter
 void imu_update()
 {
+    // reset the zero offset if set zero flag triggered
+    lockVariable();
+    if (imu.set_zero_flag == true){
+        imu_set_zero();
+        imu.set_zero_flag = false;
+    }
+    unlockVariable();
+
+    // update parameter from imu
     JY901.GetAngle();
     JY901.GetAcc();
     JY901.GetGyro();
@@ -22,17 +44,16 @@ void imu_update()
     JY901.GetPress();
 
     // Filtered angle in deg
-    // Accuracy:X, Y-axis: 0.05°
-    //         Z-axis: 1°(after magnetic
-    //         calibration)
+    // Accuracy: X, Y-axis: 0.05°
+    //           Z-axis: 1°(after magnetic calibration)
     // Output
     // X, Z-axis: ±180°
     // Y ±90°
     // (Y-axis 90° is singular point)
     lockVariable();
-    imu.roll = ((float)JY901.stcAngle.Angle[0] / 32768 * 180);
-    imu.pitch = ((float)JY901.stcAngle.Angle[1] / 32768 * 180);
-    imu.yaw = ((float)JY901.stcAngle.Angle[2] / 32768 * 180);
+    imu.roll = ((float)JY901.stcAngle.Angle[0] / 32768 * 180) - roll_zero_offset;
+    imu.pitch = ((float)JY901.stcAngle.Angle[1] / 32768 * 180) - pitch_zero_offset;
+    imu.yaw = ((float)JY901.stcAngle.Angle[2] / 32768 * 180) - yaw_zero_offset;
 
     // Accelerometer
     // Accuracy: 0.01g
@@ -63,10 +84,6 @@ void imu_update()
     imu.mx = (JY901.stcMag.h[0]);
     imu.my = (JY901.stcMag.h[1]);
     imu.mz = (JY901.stcMag.h[2]);
-
-    // JY901.GetLonLat();
-    // lattitude = ((double)(JY901.stcLonLat.lLat % 10000000)/1e5);
-    // longitude = ((double)(JY901.stcLonLat.lLon % 10000000)/1e5);
 
     // air pressure and estimate height
     // Output

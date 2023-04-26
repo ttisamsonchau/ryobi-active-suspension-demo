@@ -12,117 +12,82 @@ rmdx8_pro RR_motor(&can2, SUS_MOTOR_RR_ID);
 // joint parameter configuaration
 void motor_param_config()
 {
-    // joint physical limit
-    // suspension param:
-    // FL: 0 ~ -90 deg
-    // FR: 0 ~ 90 deg
-    // RL: 0 ~ 90 deg
-    // RR: 0 ~ -90 deg
     lockVariable();
     // FL
-    motor_FL.pos_upper_limit = 0;   // motor maximum position allowed in deg
-    motor_FL.pos_lower_limit = -90; // motor minimum position allowed in deg    suspension_motor.torq_current_limit = SUSPENSION_ABS_CURRENT_LIMIT;
-    motor_FL.Kp = 5.0;
-    motor_FL.Kd = 0.5;
-    motor_FL.dir = -1; // 1 -> CW ; -1 -> CCW
+    motor_FL.pos_upper_limit = FL_UPPER_LIMIT; // motor maximum position allowed in deg
+    motor_FL.pos_lower_limit = FL_LOWER_LIMIT; // motor minimum position allowed in deg    suspension_motor.torq_current_limit = SUSPENSION_ABS_CURRENT_LIMIT;
+    motor_FL.Kp = FL_KP;
+    motor_FL.Kd = FL_KD;
+    motor_FL.dir = FL_ROTATE_DIR; // 1 -> CW ; -1 -> CCW
 
     // FR
-    motor_FR.pos_upper_limit = 90; // motor maximum position allowed in deg
-    motor_FR.pos_lower_limit = 0;  // motor minimum position allowed in deg    suspension_motor.torq_current_limit = SUSPENSION_ABS_CURRENT_LIMIT;
-    motor_FR.Kp = 5.0;
-    motor_FR.Kd = 0.5;
-    motor_FR.dir = 1; // 1 -> CW ; -1 -> CCW
+    motor_FR.pos_upper_limit = FR_UPPER_LIMIT; // motor maximum position allowed in deg
+    motor_FR.pos_lower_limit = FR_LOWER_LIMIT; // motor minimum position allowed in deg    suspension_motor.torq_current_limit = SUSPENSION_ABS_CURRENT_LIMIT;
+    motor_FR.Kp = FR_KP;
+    motor_FR.Kd = FR_KD;
+    motor_FR.dir = FR_ROTATE_DIR; // 1 -> CW ; -1 -> CCW
     // RL
-    motor_RL.pos_upper_limit = 90; // motor maximum position allowed in deg
-    motor_RL.pos_lower_limit = 0;  // motor minimum position allowed in deg    suspension_motor.torq_current_limit = SUSPENSION_ABS_CURRENT_LIMIT;
-    motor_RL.Kp = 5.0;
-    motor_RL.Kd = 0.5;
-    motor_RL.dir = 1; // 1 -> CW ; -1 -> CCW
+    motor_RL.pos_upper_limit = RL_UPPER_LIMIT; // motor maximum position allowed in deg
+    motor_RL.pos_lower_limit = RL_LOWER_LIMIT;              // motor minimum position allowed in deg    suspension_motor.torq_current_limit = SUSPENSION_ABS_CURRENT_LIMIT;
+    motor_RL.Kp = RL_KP;
+    motor_RL.Kd = RL_KD;
+    motor_RL.dir = RL_ROTATE_DIR; // 1 -> CW ; -1 -> CCW
     // RR
-    motor_RR.pos_upper_limit = 0;   // motor maximum position allowed in deg
-    motor_RR.pos_lower_limit = -90; // motor minimum position allowed in deg    suspension_motor.torq_current_limit = SUSPENSION_ABS_CURRENT_LIMIT;
-    motor_RR.Kp = 5.0;
-    motor_RR.Kd = 0.5;
-    motor_RR.dir = -1; // 1 -> CW ; -1 -> CCW
+    motor_RR.pos_upper_limit = RR_UPPER_LIMIT;   // motor maximum position allowed in deg
+    motor_RR.pos_lower_limit = RR_LOWER_LIMIT; // motor minimum position allowed in deg    suspension_motor.torq_current_limit = SUSPENSION_ABS_CURRENT_LIMIT;
+    motor_RR.Kp = RR_KP;
+    motor_RR.Kd = RR_KD;
+    motor_RR.dir = RR_ROTATE_DIR; // 1 -> CW ; -1 -> CCW
     unlockVariable();
+}
+
+uint8_t motor_driver_detect(suspension_motor *motor_joint, rmdx8_pro *motor){
+    if (motor -> get_state_msg_2())
+    {
+        lockVariable();
+        motor_joint -> state = READY;
+        unlockVariable();
+        return 1;
+    }
+    else
+    {
+        lockVariable();
+        motor_joint -> state = UNKNOWN;
+        unlockVariable();
+        return 0;
+    }
 }
 
 // motor driver initialization
 void sus_motor_init()
 {
     Serial.printf("canbus init start\r\n");
+    Serial.printf("reset motor driver\r\n");
     FL_motor.motor_drv_reset();
     FR_motor.motor_drv_reset();
     RL_motor.motor_drv_reset();
     RR_motor.motor_drv_reset();
 
-    Serial.printf("reseted motor driver\r\n");
+    Serial.printf("set motor controller mode\r\n");
     FL_motor.set_mode(MOTION_CONTROL_LOOP);
     FR_motor.set_mode(MOTION_CONTROL_LOOP);
     RL_motor.set_mode(MOTION_CONTROL_LOOP);
     RR_motor.set_mode(MOTION_CONTROL_LOOP);
 
+    Serial.printf("init param\r\n");
     motor_param_config();
-    Serial.printf("configured mode\r\n");
+
     vTaskDelay(pdMS_TO_TICKS(2000));
-    // FL
-    if (FL_motor.get_state_msg_2())
-    {
-        lockVariable();
-        motor_FL.state = READY;
-        unlockVariable();
-        Serial.printf("FL motor done\r\n");
-    }
-    else
-    {
-        lockVariable();
-        motor_FL.state = UNKNOWN;
-        unlockVariable();
-    }
 
-    // FR
-    if (FR_motor.get_state_msg_2())
-    {
-        lockVariable();
-        motor_FR.state = READY;
-        unlockVariable();
-        Serial.printf("FR motor done\r\n");
-    }
-    else
-    {
-        lockVariable();
-        motor_FR.state = UNKNOWN;
-        unlockVariable();
-    }
-
-    // RL
-    if (RL_motor.get_state_msg_2())
-    {
-        lockVariable();
-        motor_RL.state = READY;
-        unlockVariable();
-        Serial.printf("RL motor done\r\n");
-    }
-    else
-    {
-        lockVariable();
-        motor_RL.state = UNKNOWN;
-        unlockVariable();
-    }
-
-    // RR
-    if (RR_motor.get_state_msg_2())
-    {
-        lockVariable();
-        motor_RR.state = READY;
-        unlockVariable();
-        Serial.printf("RR motor done\r\n");
-    }
-    else
-    {
-        lockVariable();
-        motor_RR.state = UNKNOWN;
-        unlockVariable();
+    Serial.printf("detect driver\r\n");
+    if(motor_driver_detect(&motor_FL, &FL_motor) == 1 
+        &&  motor_driver_detect(&motor_FR, &FR_motor) == 1
+        && motor_driver_detect(&motor_RL, &RL_motor) == 1
+        && motor_driver_detect(&motor_RR, &RR_motor) == 1){
+            Serial.printf("All driver init finish\r\n");
+        }
+    else{
+        Serial.printf("detect driver fail\r\n");
     }
 
     FL_motor.motor_drv_disable();
